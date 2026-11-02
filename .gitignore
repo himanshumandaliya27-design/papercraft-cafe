@@ -1,0 +1,25 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+
+# Environment files (keep examples)
+.env*
+!.env.example
+
+# Firebase service account keys - NEVER commit these
+*-firebase-adminsdk-*.json
+service-account*.json
+firebase-admin-key*.json
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

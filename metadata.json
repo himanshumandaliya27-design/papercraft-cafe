@@ -1,0 +1,6 @@
+{
+  "name": "Atelier Vélin — Specialty Coffee & Paper Roastery",
+  "description": "A tactile, paper-crafted single-page experience for Atelier Vélin specialty coffee roastery and bakery, featuring 3D unfolding cards, cutout photography, and artisan menus.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

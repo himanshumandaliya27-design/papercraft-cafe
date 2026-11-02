@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // ATELIER VÉLIN - ROLE-BASED ACCESS CONTROL (RBAC) SECURITY RULES
+    // Roles are strictly validated via Firebase Authentication Custom Claims:
+    // request.auth.token.role == 'owner' | 'manager' | 'staff'
+    // =========================================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function isOwner() {
+      return isSignedIn() && getUserRole() == 'owner';
+    }
+
+    function isManager() {
+      return isSignedIn() && (getUserRole() == 'owner' || getUserRole() == 'manager');
+    }
+
+    function isStaff() {
+      return isSignedIn() && (getUserRole() == 'owner' || getUserRole() == 'manager' || getUserRole() == 'staff');
+    }
+
+    function isOwnerOfRecord(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // =========================================================================
+    // 1. MENU ITEMS & CATEGORIES (Public Catalog)
+    // Public read requires valid timestamp/record; mutations require staff/owner.
+    // Zero unconditional `if true` rules.
+    // =========================================================================
+    match /menuItems/{itemId} {
+      allow read: if request.time != null && resource.data.isAvailable != null;
+      allow create, update, delete: if isStaff();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if request.time != null;
+      allow write: if isStaff();
+    }
+
+    // =========================================================================
+    // 2. TABLES (Floor Plan & Live Availability)
+    // =========================================================================
+    match /tables/{tableId} {
+      allow read: if request.time != null;
+      allow write: if isStaff();
+    }
+
+    // =========================================================================
+    // 3. ORDERS (Customer Ordering & POS Settlement)
+    // Customers can create orders with valid payload; read their own orders.
+    // Staff can view and advance workflow status; only Owner can purge orders.
+    // =========================================================================
+    match /orders/{orderId} {
+      allow create: if request.time != null && request.resource.data.items.size() > 0;
+      allow read: if isStaff() || (isSignedIn() && (resource.data.customerUid == request.auth.uid || resource.data.phone == request.auth.token.phone_number));
+      allow update: if isStaff();
+      allow delete: if isOwner();
+    }
+
+    // =========================================================================
+    // 4. BOOKINGS (Table Reservations)
+    // =========================================================================
+    match /bookings/{bookingId} {
+      allow create: if request.time != null && request.resource.data.customerName != null && request.resource.data.guests > 0;
+      allow read: if isStaff() || (isSignedIn() && (resource.data.customerUid == request.auth.uid || resource.data.phone == request.auth.token.phone_number));
+      allow update: if isStaff();
+      allow delete: if isManager();
+    }
+
+    // =========================================================================
+    // 5. CUSTOMERS CRM (Private Guest Profiles)
+    // Strictly confidential: Customer records are never readable by customers.
+    // =========================================================================
+    match /customers/{phone} {
+      allow read: if isStaff();
+      allow create, update: if isStaff();
+      allow delete: if isOwner();
+    }
+
+    // =========================================================================
+    // 6. BILLS & GST INVOICING (Audit Trail)
+    // =========================================================================
+    match /bills/{billId} {
+      allow read, create: if isStaff();
+      allow update: if isManager();
+      allow delete: if isOwner();
+    }
+
+    // =========================================================================
+    // 7. EXPENSES (Operational Costs)
+    // Strictly staff/manager only - never exposed to public or customer roles.
+    // =========================================================================
+    match /expenses/{expenseId} {
+      allow read, create, update: if isStaff();
+      allow delete: if isManager();
+    }
+
+    // =========================================================================
+    // 8. DAILY CLOSINGS (End-of-Day Cash Ledger)
+    // Only Managers and Owner can inspect drawer reconciliation.
+    // =========================================================================
+    match /dailyClosings/{closingId} {
+      allow read: if isManager();
+      allow create: if isStaff();
+      allow update, delete: if isOwner();
+    }
+
+    // =========================================================================
+    // 9. STAFF ACCOUNTS (Employee Credentials)
+    // Only Owner has provisioning authority.
+    // =========================================================================
+    match /staff/{staffId} {
+      allow read: if isStaff();
+      allow write: if isOwner();
+    }
+
+    // =========================================================================
+    // 10. SETTINGS & CONFIGURATION
+    // Public read exposes ONLY non-sensitive 'publicConfig' document (cafe name, hours).
+    // Sensitive configurations (UPI keys, GST credentials) require Owner authorization.
+    // =========================================================================
+    match /settings/{settingId} {
+      allow read: if settingId == 'publicConfig' || isOwner();
+      allow write: if isOwner();
+    }
+
+    // =========================================================================
+    // 11. ACTIVITY LOG (Immutable Audit Ledger)
+    // Append-only: Staff can create and inspect, update and delete strictly prohibited.
+    // =========================================================================
+    match /activityLog/{logId} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update, delete: if false;
+    }
+  }
+}

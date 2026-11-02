@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user has manager or owner role in custom claims
+    function isManagerOrOwner() {
+      return request.auth != null && 
+        (request.auth.token.role == 'owner' || request.auth.token.role == 'manager');
+    }
+
+    // Menu Item Photos & Thumbnails
+    // Public read for customer and admin sites
+    // Writes restricted to authenticated staff with Owner or Manager privileges
+    // Enforces image content-type and maximum file size of 5MB before server processing
+    match /menu/{itemId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isManagerOrOwner()
+                   && request.resource.contentType.matches('image/.*')
+                   && request.resource.size < 5 * 1024 * 1024;
+      allow delete: if isManagerOrOwner();
+    }
+
+    // Default catch-all denies unauthorized access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

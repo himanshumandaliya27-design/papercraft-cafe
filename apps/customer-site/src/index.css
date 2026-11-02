@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --cream-paper: #F4EBDD;
+    --cream-sheet: #FAF5EC;
+    --kraft-brown: #B98A5E;
+    --espresso: #2B1B14;
+    --terracotta: #C65D3B;
+    --charcoal-soft: #4A372F;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #F4EBDD;
+    color: #2B1B14;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-serif-display {
+    font-family: 'Fraunces', Georgia, serif;
+  }
+
+  .font-handwritten {
+    font-family: 'Caveat', cursive;
+  }
+}
+
+/* Tactile Paper Grain Overlay */
+.paper-grain {
+  background-image: radial-gradient(rgba(43, 27, 20, 0.045) 1px, transparent 0),
+    radial-gradient(rgba(185, 138, 94, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* Multi-layer realistic paper sheet elevation */
+.paper-sheet {
+  background-color: #FAF5EC;
+  box-shadow:
+    0 1px 2px rgba(43, 27, 20, 0.07),
+    0 4px 10px -2px rgba(43, 27, 20, 0.08),
+    0 12px 24px -6px rgba(43, 27, 20, 0.06),
+    inset 0 0 0 1px rgba(185, 138, 94, 0.22);
+}
+
+.paper-sheet-kraft {
+  background-color: #E7D6BE;
+  box-shadow:
+    0 2px 4px rgba(43, 27, 20, 0.1),
+    0 8px 18px -4px rgba(43, 27, 20, 0.1),
+    inset 0 0 0 1px rgba(185, 138, 94, 0.35);
+}
+
+.paper-sheet-hover {
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.paper-sheet-hover:hover {
+  box-shadow:
+    0 4px 8px rgba(43, 27, 20, 0.09),
+    0 14px 28px -4px rgba(43, 27, 20, 0.13),
+    0 24px 40px -12px rgba(43, 27, 20, 0.09),
+    inset 0 0 0 1px rgba(185, 138, 94, 0.35);
+}
+
+/* Irregular Cutout Hero Photo Shape */
+.clip-irregular-photo {
+  clip-path: polygon(
+    2% 4%,
+    28% 1%,
+    64% 3%,
+    97% 1%,
+    99% 32%,
+    98% 71%,
+    96% 97%,
+    68% 99%,
+    31% 97%,
+    1% 98%,
+    3% 61%,
+    1% 27%
+  );
+}
+
+/* Cutout Gallery Photo Shapes */
+.clip-cutout-1 {
+  clip-path: polygon(1% 3%, 98% 1%, 99% 96%, 3% 99%);
+}
+
+.clip-cutout-2 {
+  clip-path: polygon(2% 1%, 96% 3%, 98% 98%, 1% 95%);
+}
+
+.clip-cutout-3 {
+  clip-path: polygon(3% 2%, 99% 2%, 96% 97%, 1% 98%);
+}
+
+/* Paper Luggage Tag Button Clip */
+.clip-paper-tag {
+  clip-path: polygon(14px 0%, 100% 0%, 100% 100%, 14px 100%, 0% 50%);
+}
+
+/* Perforated Ticket Cutout Corners */
+.ticket-cutout {
+  position: relative;
+  background: #FAF5EC;
+  box-shadow:
+    0 4px 14px rgba(43, 27, 20, 0.09),
+    inset 0 0 0 1px rgba(185, 138, 94, 0.35);
+}
+
+/* Washi Tape Strip */
+.washi-tape {
+  background: linear-gradient(
+    135deg,
+    rgba(198, 93, 59, 0.78) 0%,
+    rgba(198, 93, 59, 0.68) 100%
+  );
+  box-shadow: 0 1px 3px rgba(43, 27, 20, 0.14);
+  backdrop-filter: blur(1px);
+  clip-path: polygon(
+    3% 0%, 97% 2%, 100% 18%, 96% 38%, 100% 58%, 97% 80%, 100% 100%,
+    3% 98%, 0% 82%, 4% 62%, 0% 42%, 4% 22%
+  );
+}
+
+.washi-tape-kraft {
+  background: linear-gradient(
+    135deg,
+    rgba(185, 138, 94, 0.72) 0%,
+    rgba(214, 179, 140, 0.65) 100%
+  );
+  box-shadow: 0 1px 3px rgba(43, 27, 20, 0.12);
+  backdrop-filter: blur(1px);
+  clip-path: polygon(
+    2% 0%, 98% 1%, 96% 25%, 100% 50%, 96% 75%, 99% 100%,
+    1% 99%, 4% 75%, 0% 50%, 4% 25%
+  );
+}
+
+/* 3D Card Folding & Flip Utilities */
+.perspective-1200 {
+  perspective: 1200px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Subtle paper fold crease shadow */
+.paper-crease-vertical {
+  background: linear-gradient(
+    90deg,
+    rgba(43, 27, 20, 0) 0%,
+    rgba(43, 27, 20, 0.06) 48%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(43, 27, 20, 0.03) 53%,
+    rgba(43, 27, 20, 0) 100%
+  );
+}
+
+.paper-crease-horizontal {
+  background: linear-gradient(
+    180deg,
+    rgba(43, 27, 20, 0) 0%,
+    rgba(43, 27, 20, 0.07) 48%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(43, 27, 20, 0.03) 53%,
+    rgba(43, 27, 20, 0) 100%
+  );
+}
+
+/* Slide in animation for cart drawer */
+@keyframes slideLeft {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-left {
+  animation: slideLeft 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  header, footer, nav, button, .no-print {
+    display: none !important;
+  }
+
+  #printable-receipt, #qr-sheet-print {
+    display: block !important;
+    position: static !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
