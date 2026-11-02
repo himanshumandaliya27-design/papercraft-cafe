@@ -1,7 +1,6 @@
 # Atelier Vélin — Customer Site Netlify Configuration
 [build]
-  base = "apps/customer-site"
-  command = "cd ../.. && npm ci && npm run build --workspace=apps/customer-site"
+  command = "npm run build"
   publish = "dist"
 
 [build.environment]
