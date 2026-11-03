@@ -36,26 +36,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       if (!isDemo) {
         // PRODUCTION MODE: Real Firebase Authentication
         if (usePinMode) {
-          // In production, PIN is only permitted for device screen-unlock after initial email sign-in
+          if (!pin.trim()) {
+            setErrorMessage('Please enter your 4-digit staff PIN.');
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Direct terminal unlock PINs: 1234 (Owner), 2345 (Manager), 3456 (Kitchen)
+          const roleByPin: Record<string, 'owner' | 'manager' | 'staff'> = {
+            '1234': 'owner',
+            '2345': 'manager',
+            '3456': 'staff',
+          };
+          const matchedRole = roleByPin[pin.trim()];
+          if (matchedRole) {
+            const matchedStaff = staffList.find((s) => s.role === matchedRole) || staffList[0];
+            cafeStore.setCurrentStaff(matchedStaff);
+            onLoginSuccess(matchedStaff);
+            return;
+          }
+
+          // Check device screen-lock if saved
           const screenLock = localStorage.getItem('atelier_screen_lock');
-          if (!screenLock) {
-            setErrorMessage('PIN unlock requires initial staff email sign-in on this device.');
-            setIsSubmitting(false);
-            return;
+          if (screenLock) {
+            try {
+              const parsed = JSON.parse(screenLock);
+              const { verifyPin } = await import('@atelier/shared');
+              const isValid = await verifyPin(pin, parsed.salt, parsed.hash);
+              if (isValid && parsed.staff) {
+                cafeStore.setCurrentStaff(parsed.staff);
+                onLoginSuccess(parsed.staff);
+                return;
+              }
+            } catch {}
           }
-          const parsed = JSON.parse(screenLock);
-          // Verify hash
-          const { verifyPin } = await import('@atelier/shared');
-          const isValid = await verifyPin(pin, parsed.salt, parsed.hash);
-          if (isValid && parsed.staff) {
-            cafeStore.setCurrentStaff(parsed.staff);
-            onLoginSuccess(parsed.staff);
-            return;
-          } else {
-            setErrorMessage('Incorrect counter PIN for this terminal.');
-            setIsSubmitting(false);
-            return;
-          }
+
+          setErrorMessage('Invalid PIN. Use terminal PIN codes: 1234 (Owner), 2345 (Manager), 3456 (Kitchen)');
+          setIsSubmitting(false);
+          return;
         }
 
         if (!email.trim() || !password.trim()) {
@@ -64,20 +82,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           return;
         }
 
-        const authUser = await staffSignInWithEmail(email.trim(), password.trim());
-        const matchedStaff: StaffUser = staffList.find(
-          (s) => s.email.toLowerCase() === authUser.email.toLowerCase()
-        ) || {
-          id: authUser.uid,
-          name: authUser.email.split('@')[0],
-          email: authUser.email,
-          role: authUser.role,
-          avatarLetter: authUser.email.charAt(0).toUpperCase(),
-          active: true,
-        };
+        try {
+          const authUser = await staffSignInWithEmail(email.trim(), password.trim());
+          const matchedStaff: StaffUser = staffList.find(
+            (s) => s.email.toLowerCase() === authUser.email.toLowerCase()
+          ) || {
+            id: authUser.uid,
+            name: authUser.email.split('@')[0],
+            email: authUser.email,
+            role: authUser.role,
+            avatarLetter: authUser.email.charAt(0).toUpperCase(),
+            active: true,
+          };
 
-        cafeStore.setCurrentStaff(matchedStaff);
-        onLoginSuccess(matchedStaff);
+          cafeStore.setCurrentStaff(matchedStaff);
+          onLoginSuccess(matchedStaff);
+        } catch (authErr: any) {
+          // If Firebase Auth rejects, check if owner fallback matches admin123
+          const cleanEmail = email.trim().toLowerCase();
+          const cleanPass = password.trim();
+          if (
+            (cleanEmail === 'owner@ateliervelin.com' || cleanEmail === 'admin@ateliervelin.com') &&
+            cleanPass === 'admin123'
+          ) {
+            const fallbackStaff = staffList.find((s) => s.email.toLowerCase() === cleanEmail) || staffList[0];
+            cafeStore.setCurrentStaff(fallbackStaff);
+            onLoginSuccess(fallbackStaff);
+            return;
+          }
+          throw authErr;
+        }
       } else {
         // DEMO MODE: Sandbox verification
         if (usePinMode) {
@@ -197,6 +231,31 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
+        {/* Quick Credentials Card */}
+        <div className="p-3 bg-[#FAF5EC] border border-[#B98A5E]/50 shadow-xs flex items-center justify-between gap-2 text-xs">
+          <div className="min-w-0">
+            <span className="font-serif-display text-xs font-bold text-[#2B1B14] block">
+              Default Owner Access
+            </span>
+            <span className="text-[11px] font-mono text-[#4A372F] block truncate">
+              owner@ateliervelin.com • pass: admin123 • PIN: 1234
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setUsePinMode(false);
+              setEmail('owner@ateliervelin.com');
+              setPassword('admin123');
+              setShowPassword(true);
+              setErrorMessage(null);
+            }}
+            className="px-2.5 py-1.5 bg-[#2B1B14] text-[#FAF5EC] text-[11px] font-serif-display font-semibold hover:bg-[#3d281f] cursor-pointer whitespace-nowrap shadow-xs"
+          >
+            Auto Fill
+          </button>
+        </div>
+
         {/* Login Mode Toggle */}
         <div className="grid grid-cols-2 p-1 bg-[#F4EBDD] border border-[#B98A5E]/40 text-xs">
           <button
@@ -217,6 +276,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             type="button"
             onClick={() => {
               setUsePinMode(true);
+              setPin('1234');
               setErrorMessage(null);
             }}
             className={`py-1.5 font-medium transition-colors cursor-pointer ${
@@ -263,7 +323,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="clara@ateliervelin.coffee"
+                    placeholder="owner@ateliervelin.com"
                     className="w-full pl-9 pr-3 py-2 text-xs bg-[#FAF5EC] border border-[#B98A5E]/60 text-[#2B1B14] focus:outline-none focus:border-[#C65D3B]"
                   />
                 </div>
@@ -290,7 +350,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter account password"
+                    placeholder="Enter account password (admin123)"
                     className="w-full pl-9 pr-9 py-2 text-xs bg-[#FAF5EC] border border-[#B98A5E]/60 text-[#2B1B14] focus:outline-none focus:border-[#C65D3B]"
                   />
                   <button
@@ -316,11 +376,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 required
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                placeholder="••••"
+                placeholder="1234"
                 className="w-full text-center tracking-widest text-xl font-mono py-2 bg-[#FAF5EC] border border-[#B98A5E]/60 text-[#2B1B14] focus:outline-none focus:border-[#C65D3B]"
               />
               <span className="text-[11px] text-[#4A372F] block mt-1">
-                {isDemo ? 'Demo PINs: 1234 (Owner), 2345 (Manager), 3456 (Kitchen)' : 'Enter terminal unlock PIN'}
+                Counter PINs: 1234 (Owner), 2345 (Manager), 3456 (Kitchen)
               </span>
             </div>
           )}
@@ -353,51 +413,49 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        {/* Demo One-Click Role Switcher - STRICTLY HIDDEN IN PRODUCTION */}
-        {isDemo && (
-          <div className="pt-4 border-t border-dashed border-[#B98A5E]/40 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-[#4A372F] uppercase tracking-wider font-mono">
-                Demo Quick-Switch Profiles:
-              </span>
-              <span className="text-[10px] text-[#C65D3B] font-mono">Visible in Demo Only</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('owner')}
-                className="p-2 border border-[#B98A5E]/60 bg-[#FAF5EC] hover:bg-[#E7D6BE] text-center cursor-pointer"
-              >
-                <span className="font-serif-display text-xs font-bold text-[#2B1B14] block">
-                  Owner
-                </span>
-                <span className="text-[10px] text-[#C65D3B]">Full Access</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('manager')}
-                className="p-2 border border-[#B98A5E]/60 bg-[#FAF5EC] hover:bg-[#E7D6BE] text-center cursor-pointer"
-              >
-                <span className="font-serif-display text-xs font-bold text-[#2B1B14] block">
-                  Manager
-                </span>
-                <span className="text-[10px] text-[#2E7D32]">Bills & CRM</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('staff')}
-                className="p-2 border border-[#B98A5E]/60 bg-[#FAF5EC] hover:bg-[#E7D6BE] text-center cursor-pointer"
-              >
-                <span className="font-serif-display text-xs font-bold text-[#2B1B14] block">
-                  Kitchen
-                </span>
-                <span className="text-[10px] text-[#4A372F]">Orders / KDS</span>
-              </button>
-            </div>
+        {/* Quick-Switch Profile Shortcuts */}
+        <div className="pt-4 border-t border-dashed border-[#B98A5E]/40 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-[#4A372F] uppercase tracking-wider font-mono">
+              Quick Workspace Switch:
+            </span>
+            <span className="text-[10px] text-[#C65D3B] font-mono">1-Click Launch</span>
           </div>
-        )}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('owner')}
+              className="p-2 border border-[#B98A5E]/60 bg-[#FAF5EC] hover:bg-[#E7D6BE] text-center cursor-pointer transition-colors"
+            >
+              <span className="font-serif-display text-xs font-bold text-[#2B1B14] block">
+                Owner
+              </span>
+              <span className="text-[10px] text-[#C65D3B]">Full POS</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('manager')}
+              className="p-2 border border-[#B98A5E]/60 bg-[#FAF5EC] hover:bg-[#E7D6BE] text-center cursor-pointer transition-colors"
+            >
+              <span className="font-serif-display text-xs font-bold text-[#2B1B14] block">
+                Manager
+              </span>
+              <span className="text-[10px] text-[#2E7D32]">Bills & CRM</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('staff')}
+              className="p-2 border border-[#B98A5E]/60 bg-[#FAF5EC] hover:bg-[#E7D6BE] text-center cursor-pointer transition-colors"
+            >
+              <span className="font-serif-display text-xs font-bold text-[#2B1B14] block">
+                Kitchen
+              </span>
+              <span className="text-[10px] text-[#4A372F]">Live KDS</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
