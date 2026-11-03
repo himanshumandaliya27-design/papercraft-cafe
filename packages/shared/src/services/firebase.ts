@@ -111,14 +111,31 @@ export async function staffSignInWithEmail(
     throw new Error('Firebase Auth is not configured. Running in Demo Mode.');
   }
 
-  const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
+  const cleanEmail = email.trim();
+  const cleanPass = pass.trim();
+
+  let cred;
+  try {
+    cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+  } catch (err: any) {
+    if (pass !== cleanPass) {
+      try {
+        cred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPass);
+      } catch {
+        throw err;
+      }
+    } else {
+      throw err;
+    }
+  }
+
   const tokenResult = await cred.user.getIdTokenResult();
   const role = (tokenResult.claims.role as 'owner' | 'manager' | 'staff') ||
-    (email.toLowerCase().includes('clara') || email.toLowerCase().includes('owner') || email.toLowerCase().includes('admin') ? 'owner' : 'staff');
+    (cleanEmail.toLowerCase().includes('clara') || cleanEmail.toLowerCase().includes('owner') || cleanEmail.toLowerCase().includes('admin') ? 'owner' : 'staff');
 
   return {
     uid: cred.user.uid,
-    email: cred.user.email || email,
+    email: cred.user.email || cleanEmail,
     role,
   };
 }

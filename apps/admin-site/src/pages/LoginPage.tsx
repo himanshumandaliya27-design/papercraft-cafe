@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, Key, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Lock, Mail, Key, AlertCircle, CheckCircle, Clock, Eye, EyeOff } from 'lucide-react';
 import {
   StaffUser,
   CAFE_CONFIG,
@@ -16,6 +16,7 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [pin, setPin] = useState('');
   const [usePinMode, setUsePinMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           return;
         }
 
-        const authUser = await staffSignInWithEmail(email, password);
+        const authUser = await staffSignInWithEmail(email.trim(), password.trim());
         const matchedStaff: StaffUser = staffList.find(
           (s) => s.email.toLowerCase() === authUser.email.toLowerCase()
         ) || {
@@ -282,16 +283,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   </button>
                 </div>
                 <div className="relative">
-                  <Key className="w-4 h-4 text-[#B98A5E] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Key className="w-4 h-4 text-[#B98A5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="staff-password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-[#FAF5EC] border border-[#B98A5E]/60 text-[#2B1B14] focus:outline-none focus:border-[#C65D3B]"
+                    placeholder="Enter account password"
+                    className="w-full pl-9 pr-9 py-2 text-xs bg-[#FAF5EC] border border-[#B98A5E]/60 text-[#2B1B14] focus:outline-none focus:border-[#C65D3B]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#B98A5E] hover:text-[#2B1B14] p-1 cursor-pointer transition-colors"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
             </>
