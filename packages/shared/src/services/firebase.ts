@@ -114,7 +114,7 @@ export async function staffSignInWithEmail(
   const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
   const tokenResult = await cred.user.getIdTokenResult();
   const role = (tokenResult.claims.role as 'owner' | 'manager' | 'staff') ||
-    (email.toLowerCase().includes('clara') ? 'owner' : 'staff');
+    (email.toLowerCase().includes('clara') || email.toLowerCase().includes('owner') || email.toLowerCase().includes('admin') ? 'owner' : 'staff');
 
   return {
     uid: cred.user.uid,
